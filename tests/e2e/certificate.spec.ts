@@ -12,6 +12,25 @@ test("creates certificate from typed details", async ({ page }) => {
   await expect(page.getByAltText("Remembrance certificate for Mina Srisawat")).toBeVisible();
   await expect(page.getByRole("button", { name: "Save image" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Copy link" })).toBeEnabled();
+  await expect(page.getByRole("link", { name: "Open link" })).toHaveCount(0);
+});
+
+test("switches between English and Thai and opens social share menu", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Keep their memory close." })).toBeVisible();
+  await page.getByRole("button", { name: "TH", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "เก็บความทรงจำของเขาไว้ใกล้หัวใจ" })).toBeVisible();
+  await page.getByRole("button", { name: "EN", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Keep their memory close." })).toBeVisible();
+
+  await page.getByLabel("Full name").fill("Mina Srisawat");
+  await page.getByLabel("Date of birth", { exact: true }).fill("12/04/1948");
+  await page.getByLabel("Date of passing", { exact: true }).fill("10/10/2024");
+  await page.getByRole("button", { name: /Create certificate/ }).click();
+  await page.getByRole("button", { name: "Share", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "Facebook" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "X" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Instagram" })).toBeVisible();
 });
 
 test("supports native date pickers and image upload", async ({ page }) => {

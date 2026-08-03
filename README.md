@@ -9,11 +9,13 @@ Repository: <https://github.com/newasia2538/d-cert-gen-web>
 ## Features
 
 - Upload an image or paste an image directly from the clipboard.
+- Switch the interface between English and Thai.
 - Enter dates by typing or by using the native date picker.
-- Generate a responsive certificate preview with a soft, minimalist visual style.
-- Export the certificate as a high-resolution PNG image.
+- Generate a responsive square certificate preview with a soft, minimalist visual style.
+- Export the square certificate as a high-resolution PNG image.
 - Share through the Web Share API when supported.
-- Copy or open a compressed share URL containing the certificate state.
+- Open sharing actions for Facebook, X, and Instagram.
+- Copy a compressed share URL containing the certificate state.
 - Keep images and certificate data in the browser until the user chooses to share or download.
 
 ## Technology
@@ -36,6 +38,8 @@ The project uses a small, client-first architecture:
 - `lib/certificate.ts` contains date validation, XML escaping, and SVG generation.
 - `lib/share.ts` contains compressed URL-state encoding and decoding.
 - `tests/` contains unit and browser automation coverage.
+
+Certificate images include Thai `ชาตะ` and `มรณะ` date labels on separate lines. Instagram does not provide a general web URL-sharing endpoint, so its action copies the share link and opens Instagram; mobile users can also use the native device share sheet.
 
 No image or certificate data is sent to an application server. Uploaded images are resized in the browser before being embedded in the generated certificate and share URL.
 

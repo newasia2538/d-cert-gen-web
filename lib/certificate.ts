@@ -1,3 +1,5 @@
+export type CertificateLocale = "en" | "th";
+
 export type CertificateData = {
   name: string;
   born: string;
@@ -23,15 +25,14 @@ export function escapeXml(value: string): string {
     .replaceAll("'", "&apos;");
 }
 
-export function formatDateLabel(value: string): string {
+export function formatDateLabel(value: string, locale: CertificateLocale = "en"): string {
   const cleaned = value.trim();
   if (!cleaned) return "—";
 
   const date = toDate(cleaned);
-
   if (!date || Number.isNaN(date.valueOf())) return cleaned;
 
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en-GB", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -58,46 +59,72 @@ export function validateDates(born: string, passed: string): string | null {
   return null;
 }
 
-export function renderCertificateSvg(data: CertificateData): string {
-  const name = escapeXml(data.name.trim() || "A life remembered");
-  const born = escapeXml(formatDateLabel(data.born));
-  const passed = escapeXml(formatDateLabel(data.passed));
-  const message = escapeXml(
-    data.message.trim() || "A life remembered with tenderness, gratitude, and love.",
-  );
+export function renderCertificateSvg(data: CertificateData, locale: CertificateLocale = "en"): string {
+  const name = escapeXml(data.name.trim() || (locale === "th" ? "ชีวิตที่ระลึกถึง" : "A life remembered"));
+  const born = escapeXml(formatDateLabel(data.born, locale));
+  const passed = escapeXml(formatDateLabel(data.passed, locale));
+  const message = data.message.trim() || (locale === "th"
+    ? "ระลึกถึงด้วยความอ่อนโยน ความขอบคุณ และความรัก"
+    : "A life remembered with tenderness, gratitude, and love.");
+  const messageLines = wrapText(message, 48).map(escapeXml);
+  const messageSvg = messageLines.map((line, index) => `<tspan x="540" dy="${index === 0 ? 0 : 32}">${line}</tspan>`).join("");
   const portrait = data.imageDataUrl
-    ? `<image href="${escapeXml(data.imageDataUrl)}" x="242" y="192" width="316" height="316" preserveAspectRatio="xMidYMid slice" clip-path="url(#portraitClip)"/>`
-    : `<circle cx="400" cy="350" r="140" fill="#e7ddd0"/>
-       <path d="M321 435c19-49 47-74 79-74s60 25 79 74" fill="none" stroke="${palette.gold}" stroke-width="7" stroke-linecap="round"/>
-       <circle cx="400" cy="310" r="44" fill="none" stroke="${palette.gold}" stroke-width="7"/>
-       <text x="400" y="495" text-anchor="middle" font-size="20" letter-spacing="4" fill="${palette.muted}">ADD PHOTO</text>`;
+    ? `<image href="${escapeXml(data.imageDataUrl)}" x="372" y="137" width="336" height="336" preserveAspectRatio="xMidYMid slice" clip-path="url(#portraitClip)"/>`
+    : `<circle cx="540" cy="305" r="150" fill="#e7ddd0"/>
+       <path d="M461 390c19-49 47-74 79-74s60 25 79 74" fill="none" stroke="${palette.gold}" stroke-width="7" stroke-linecap="round"/>
+       <circle cx="540" cy="265" r="44" fill="none" stroke="${palette.gold}" stroke-width="7"/>
+       <text x="540" y="445" text-anchor="middle" font-family="'Noto Sans Thai', Tahoma, Arial, sans-serif" font-size="20" letter-spacing="4" fill="${palette.muted}">${locale === "th" ? "เพิ่มรูปภาพ" : "ADD PHOTO"}</text>`;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1100" viewBox="0 0 800 1100" role="img" aria-label="Certificate of remembrance">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080" role="img" aria-label="Certificate of remembrance">
   <defs>
-    <clipPath id="portraitClip"><rect x="242" y="192" width="316" height="316" rx="158"/></clipPath>
+    <clipPath id="portraitClip"><circle cx="540" cy="305" r="168"/></clipPath>
     <linearGradient id="wash" x1="0" x2="1" y1="0" y2="1">
       <stop offset="0" stop-color="#fffdf8" stop-opacity=".7"/>
       <stop offset="1" stop-color="#efe3d3" stop-opacity=".2"/>
     </linearGradient>
   </defs>
-  <rect width="800" height="1100" fill="${palette.paper}"/>
-  <rect x="24" y="24" width="752" height="1052" rx="3" fill="url(#wash)" stroke="${palette.gold}" stroke-width="2"/>
-  <rect x="42" y="42" width="716" height="1016" rx="2" fill="none" stroke="${palette.gold}" stroke-opacity=".38"/>
-  <path d="M75 160c23-45 47-65 84-82-12 33-12 59 4 84 14-27 35-48 67-66-12 42-4 75 21 102" fill="none" stroke="${palette.gold}" stroke-width="2" opacity=".65"/>
-  <path d="M725 160c-23-45-47-65-84-82 12 33 12 59-4 84-14-27-35-48-67-66 12 42 4 75-21 102" fill="none" stroke="${palette.gold}" stroke-width="2" opacity=".65"/>
-  <circle cx="400" cy="350" r="174" fill="none" stroke="${palette.gold}" stroke-width="3"/>
-  <circle cx="400" cy="350" r="164" fill="none" stroke="${palette.gold}" stroke-opacity=".45" stroke-dasharray="2 10" stroke-width="2"/>
+  <rect width="1080" height="1080" fill="${palette.paper}"/>
+  <rect x="28" y="28" width="1024" height="1024" rx="4" fill="url(#wash)" stroke="${palette.gold}" stroke-width="2"/>
+  <rect x="48" y="48" width="984" height="984" rx="3" fill="none" stroke="${palette.gold}" stroke-opacity=".38"/>
+  <path d="M80 174c25-54 56-79 103-101-14 40-13 70 6 100 17-33 44-59 83-81-15 52-5 91 25 123" fill="none" stroke="${palette.gold}" stroke-width="2.5" opacity=".65"/>
+  <path d="M1000 174c-25-54-56-79-103-101 14 40 13 70-6 100-17-33-44-59-83-81 15 52 5 91-25 123" fill="none" stroke="${palette.gold}" stroke-width="2.5" opacity=".65"/>
+  <circle cx="540" cy="305" r="185" fill="none" stroke="${palette.gold}" stroke-width="3"/>
+  <circle cx="540" cy="305" r="174" fill="none" stroke="${palette.gold}" stroke-opacity=".45" stroke-dasharray="2 10" stroke-width="2"/>
   ${portrait}
-  <path d="M232 524c35 20 59 24 93 11 27-10 54-10 75 9 21-19 48-19 75-9 34 13 58 9 93-11" fill="none" stroke="${palette.blush}" stroke-width="5" stroke-linecap="round"/>
-  <text x="400" y="590" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="20" letter-spacing="5" fill="${palette.muted}">IN LOVING MEMORY</text>
-  <text x="400" y="664" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="44" fill="${palette.ink}">${name}</text>
-  <path d="M225 700h350" stroke="${palette.gold}" stroke-width="1"/>
-  <circle cx="400" cy="700" r="4" fill="${palette.gold}"/>
-  <text x="400" y="756" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="${palette.muted}">${born}  ·  ${passed}</text>
-  <text x="400" y="823" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-style="italic" fill="${palette.ink}">${message}</text>
-  <path d="M320 925c24 13 53 13 80 0 27 13 56 13 80 0" fill="none" stroke="${palette.blush}" stroke-width="3" stroke-linecap="round"/>
-  <text x="400" y="978" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" letter-spacing="3" fill="${palette.muted}">HELD IN OUR HEARTS</text>
+  <path d="M370 482c42 23 72 28 114 12 33-12 67-12 96 11 29-23 63-23 96-11 42 16 72 11 114-12" fill="none" stroke="${palette.blush}" stroke-width="6" stroke-linecap="round"/>
+  <text x="540" y="550" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="23" letter-spacing="5" fill="${palette.muted}">${locale === "th" ? "ระลึกถึงด้วยรัก" : "IN LOVING MEMORY"}</text>
+  <text x="540" y="625" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="48" fill="${palette.ink}">${name}</text>
+  <path d="M280 668h520" stroke="${palette.gold}" stroke-width="1"/>
+  <circle cx="540" cy="668" r="5" fill="${palette.gold}"/>
+  <g text-anchor="middle" font-family="'Noto Sans Thai', Tahoma, Arial, sans-serif" fill="${palette.muted}">
+    <text x="395" y="724" font-size="25" fill="${palette.gold}">ชาตะ</text>
+    <text x="395" y="760" font-size="22">${born}</text>
+    <text x="685" y="724" font-size="25" fill="${palette.gold}">มรณะ</text>
+    <text x="685" y="760" font-size="22">${passed}</text>
+  </g>
+  <path d="M540 705v70" stroke="${palette.gold}" stroke-opacity=".5"/>
+  <text x="540" y="850" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="24" font-style="italic" fill="${palette.ink}">${messageSvg}</text>
+  <path d="M425 954c33 17 74 17 115 0 41 17 82 17 115 0" fill="none" stroke="${palette.blush}" stroke-width="4" stroke-linecap="round"/>
+  <text x="540" y="1000" text-anchor="middle" font-family="'Noto Sans Thai', Tahoma, Arial, sans-serif" font-size="15" letter-spacing="3" fill="${palette.muted}">${locale === "th" ? "อยู่ในหัวใจของเราเสมอ" : "HELD IN OUR HEARTS"}</text>
   </svg>`;
+}
+
+function wrapText(value: string, maxCharacters: number): string[] {
+  const words = value.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [""];
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word;
+    if (next.length > maxCharacters && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = next;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.slice(0, 2);
 }
 
 function parseTypedDate(value: string): Date | null {

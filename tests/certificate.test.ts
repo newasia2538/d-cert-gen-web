@@ -5,6 +5,7 @@ describe("certificate helpers", () => {
   it("formats ISO and typed dates into readable labels", () => {
     expect(formatDateLabel("1948-04-12")).toBe("12 April 1948");
     expect(formatDateLabel("10/10/2024")).toBe("10 October 2024");
+    expect(formatDateLabel("1948-04-12", "th")).toContain("เมษายน");
     expect(formatDateLabel("2024-02-31")).toBe("2024-02-31");
   });
 
@@ -31,5 +32,8 @@ describe("certificate helpers", () => {
     expect(svg).toContain("12 April 1948");
     expect(svg).toContain('href="data:image/jpeg;base64,abc"');
     expect(svg).toContain('aria-label="Certificate of remembrance"');
+    expect(svg).toContain('width="1080" height="1080" viewBox="0 0 1080 1080"');
+    expect(svg).toContain("ชาตะ");
+    expect(svg).toContain("มรณะ");
   });
 });
