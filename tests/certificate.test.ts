@@ -32,7 +32,7 @@ describe("certificate helpers", () => {
     expect(svg).toContain("12 April 1948");
     expect(svg).toContain('href="data:image/jpeg;base64,abc"');
     expect(svg).toContain('aria-label="Certificate of remembrance"');
-    expect(svg).toContain('width="1080" height="1080" viewBox="0 0 1080 1080"');
+    expect(svg).toContain('width="1080" height="1350" viewBox="0 0 1080 1350"');
     expect(svg).toContain("ชาตะ");
     expect(svg).toContain("มรณะ");
   });

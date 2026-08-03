@@ -11,8 +11,9 @@ Repository: <https://github.com/newasia2538/d-cert-gen-web>
 - Upload an image or paste an image directly from the clipboard.
 - Switch the interface between English and Thai.
 - Enter dates by typing or by using the native date picker.
-- Generate a responsive square certificate preview with a soft, minimalist visual style.
-- Export the square certificate as a high-resolution PNG image.
+- Generate a responsive 4:5 certificate preview with a soft, minimalist visual style.
+- Crop portraits to a centered square before placing them in the certificate.
+- Export the certificate as a high-resolution PNG image.
 - Share through the Web Share API when supported.
 - Open sharing actions for Facebook, X, and Instagram.
 - Copy a compressed share URL containing the certificate state.

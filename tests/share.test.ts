@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildShareUrl, decodeCertificateState, encodeCertificateState } from "@/lib/share";
+import { buildShareUrl, buildSocialShareUrl, decodeCertificateState, decodeSocialShareState, encodeCertificateState } from "@/lib/share";
 
 const certificate = {
   name: "Mina",
@@ -16,8 +16,18 @@ describe("share state", () => {
 
   it("builds a shareable URL", () => {
     const url = buildShareUrl(certificate, "https://remembered.example");
-    expect(url.startsWith("https://remembered.example/?s=")).toBe(true);
-    expect(decodeCertificateState(new URL(url).searchParams.get("s") ?? "")).toEqual(certificate);
+    expect(url.startsWith("https://remembered.example/#s=")).toBe(true);
+    expect(decodeCertificateState(new URL(url).hash.slice(3))).toEqual(certificate);
+  });
+
+  it("builds short social URLs without embedded image data", () => {
+    const url = buildSocialShareUrl(certificate, "https://remembered.example");
+    expect(url).not.toContain("data:image");
+    expect(url.length).toBeLessThan(500);
+    expect(decodeSocialShareState(new URL(url).searchParams)).toEqual({
+      ...certificate,
+      imageDataUrl: "",
+    });
   });
 
   it("rejects malformed state", () => {

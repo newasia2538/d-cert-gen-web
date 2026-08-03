@@ -9,7 +9,7 @@ import {
   toIsoDate,
   validateDates,
 } from "@/lib/certificate";
-import { buildShareUrl, decodeCertificateState } from "@/lib/share";
+import { buildShareUrl, buildSocialShareUrl, decodeCertificateState, decodeSocialShareState } from "@/lib/share";
 
 type Locale = "en" | "th";
 type ErrorKey = "" | "datesRequired" | "dateInvalid" | "dateOrder" | "nameRequired";
@@ -187,11 +187,18 @@ export default function Home() {
   }, [locale]);
 
   useEffect(() => {
-    const encoded = new URLSearchParams(window.location.search).get("s");
-    if (!encoded) return;
-    const shared = decodeCertificateState(encoded);
+    const params = new URLSearchParams(window.location.search);
+    const encoded = params.get("s") ?? (window.location.hash.startsWith("#s=") ? window.location.hash.slice(3) : null);
+    const shared = encoded ? decodeCertificateState(encoded) : null;
     if (shared) {
       setCertificate(shared);
+      setGenerated(true);
+      setShareStatus("opened");
+      return;
+    }
+    const socialShared = decodeSocialShareState(params);
+    if (socialShared) {
+      setCertificate(socialShared);
       setGenerated(true);
       setShareStatus("opened");
     }
@@ -245,23 +252,52 @@ export default function Home() {
     window.history.replaceState({}, "", nextShareUrl);
   };
 
-  const copyShareLink = async () => {
+  const copyLink = async (url: string) => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(url);
       setShareStatus("copied");
     } catch {
       setShareStatus("copyBlocked");
     }
   };
 
+  const copyShareLink = async () => copyLink(shareUrl);
+
+  const createPngFile = async (): Promise<File | null> => new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1600;
+      canvas.height = 2000;
+      const context = canvas.getContext("2d");
+      if (!context) {
+        resolve(null);
+        return;
+      }
+      context.fillStyle = "#f6f1e8";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        resolve(blob ? new File([blob], `remembered-${slugify(certificate.name)}.png`, { type: "image/png" }) : null);
+      }, "image/png");
+    };
+    image.onerror = () => resolve(null);
+    image.src = imageUrl;
+  });
+
   const shareFromDevice = async () => {
-    if (!navigator.share) {
-      await copyShareLink();
+    const socialUrl = buildSocialShareUrl(certificate, window.location.origin);
+    if (typeof navigator.share !== "function") {
+      await copyLink(socialUrl);
       setShareMenuOpen(false);
       return;
     }
     try {
-      await navigator.share({ title: `${certificate.name} — remembered`, url: shareUrl });
+      const file = await createPngFile();
+      const shareData = file && navigator.canShare?.({ files: [file] })
+        ? { title: `${certificate.name} — remembered`, text: certificate.message, files: [file] }
+        : { title: `${certificate.name} — remembered`, text: certificate.message, url: socialUrl };
+      await navigator.share(shareData);
       setShareStatus("shared");
     } catch {
       // User cancelled share sheet.
@@ -270,15 +306,21 @@ export default function Home() {
   };
 
   const shareToSocial = async (network: ShareNetwork) => {
-    const encodedUrl = encodeURIComponent(shareUrl);
+    const socialUrl = buildSocialShareUrl(certificate, window.location.origin);
+    const encodedUrl = encodeURIComponent(socialUrl);
+    const shareText = `${certificate.name} — remembered`;
     if (network === "instagram") {
-      await copyShareLink();
+      if (typeof navigator.share === "function") {
+        await shareFromDevice();
+        return;
+      }
+      await copyLink(socialUrl);
       window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
       setShareStatus("instagram");
     } else {
       const target = network === "facebook"
-        ? `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`
-        : `https://x.com/intent/post?text=${encodeURIComponent(`${certificate.name} — remembered`)}&url=${encodedUrl}`;
+        ? `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodeURIComponent(shareText)}`
+        : `https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodedUrl}`;
       window.open(target, "_blank", "noopener,noreferrer");
       setShareStatus("shared");
     }
@@ -286,27 +328,14 @@ export default function Home() {
   };
 
   const downloadPng = async () => {
-    const image = new Image();
-    image.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 1600;
-      canvas.height = 1600;
-      const context = canvas.getContext("2d");
-      if (!context) return;
-      context.fillStyle = "#f6f1e8";
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `remembered-${slugify(certificate.name)}.png`;
-        link.click();
-        URL.revokeObjectURL(url);
-      }, "image/png");
-    };
-    image.src = imageUrl;
+    const file = await createPngFile();
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = file.name;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -445,11 +474,13 @@ async function resizeImage(file: File): Promise<string> {
     image.onerror = () => reject(new Error("image-load-failed"));
   });
   const size = 720;
-  const ratio = Math.min(1, size / Math.max(image.naturalWidth, image.naturalHeight));
+  const cropSize = Math.min(image.naturalWidth, image.naturalHeight);
+  const cropX = (image.naturalWidth - cropSize) / 2;
+  const cropY = (image.naturalHeight - cropSize) / 2;
   const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
-  canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
-  canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+  canvas.width = size;
+  canvas.height = size;
+  canvas.getContext("2d")?.drawImage(image, cropX, cropY, cropSize, cropSize, 0, 0, size, size);
   return canvas.toDataURL("image/jpeg", 0.82);
 }
 

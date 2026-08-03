@@ -22,5 +22,28 @@ export function decodeCertificateState(encoded: string): CertificateData | null 
 }
 
 export function buildShareUrl(data: CertificateData, origin: string): string {
-  return `${origin}/?s=${encodeCertificateState(data)}`;
+  return `${origin}/#s=${encodeCertificateState(data)}`;
+}
+
+export function buildSocialShareUrl(data: CertificateData, origin: string): string {
+  const params = new URLSearchParams();
+  if (data.name.trim()) params.set("n", data.name.trim().slice(0, 120));
+  if (data.born.trim()) params.set("b", data.born.trim());
+  if (data.passed.trim()) params.set("p", data.passed.trim());
+  if (data.message.trim()) params.set("m", data.message.trim().slice(0, 120));
+  return `${origin}/?${params.toString()}`;
+}
+
+export function decodeSocialShareState(params: URLSearchParams): CertificateData | null {
+  const name = params.get("n");
+  const born = params.get("b");
+  const passed = params.get("p");
+  if (!name || !born || !passed) return null;
+  return {
+    name,
+    born,
+    passed,
+    message: params.get("m") ?? "",
+    imageDataUrl: "",
+  };
 }
